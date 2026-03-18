@@ -15,6 +15,8 @@ export interface FloorRoom {
   height_m: number;
   floor: number;
   type: RoomType;
+  x_m?: number;  // AI-provided X position (metres from left)
+  y_m?: number;  // AI-provided Y position (metres from top)
 }
 
 export interface Project {

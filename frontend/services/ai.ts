@@ -141,15 +141,33 @@ function defaultLayout(numFloors: number): FloorRoom[] {
 export async function generateRoomLayout(
   plot_size: string,
   floors: number,
-  style: string
+  style: string,
+  planDescription?: string,
 ): Promise<FloorRoom[]> {
+  const roomContext = planDescription
+    ? 'Use EXACTLY the rooms listed in this construction plan (same names, same floors):\n' +
+      planDescription.slice(0, 1500) + '\n\n'
+    : '';
   const prompt =
-    'Return ONLY a valid JSON array. No explanation, no markdown code blocks — just the raw JSON starting with [ and ending with ].\n\n' +
-    'Project: Plot size ' + plot_size + ', ' + floors + ' floor(s), ' + style + ' architectural style.\n\n' +
-    'Each object must have exactly: name (string), width_m (number), height_m (number), floor (number, 1=ground), type (string).\n' +
-    'Allowed types: bedroom, living, kitchen, bathroom, dining, utility, garage, corridor, other\n\n' +
-    'Include all rooms for all ' + floors + ' floor(s). Make dimensions realistic for the plot size.\n' +
-    'Respond with ONLY the JSON array.';
+    'Return ONLY a valid JSON array. No explanation, no markdown, no code fences.\n\n' +
+    roomContext +
+    'Project: Plot size ' + plot_size + ', ' + floors + ' floor(s), ' + style + ' style.\n\n' +
+    'Each room object MUST have ALL of these fields:\n' +
+    '  name      — room name (string)\n' +
+    '  x_m       — X position in metres from the top-left origin (number)\n' +
+    '  y_m       — Y position in metres from the top-left origin (number)\n' +
+    '  width_m   — east-west dimension in metres (number)\n' +
+    '  height_m  — north-south dimension in metres (number)\n' +
+    '  floor     — floor number, 1 = ground (number)\n' +
+    '  type      — one of: bedroom, living, kitchen, bathroom, dining, utility, garage, corridor, other\n\n' +
+    'CRITICAL LAYOUT RULES:\n' +
+    '  1. Rooms must share walls — adjacent rooms have zero gap between them.\n' +
+    '  2. Rooms must fill EVERY square metre of the plot — no empty space.\n' +
+    '  3. Logically group rooms: bedrooms together, kitchen near dining, corridor connecting rooms.\n' +
+    '  4. Room sizes must be proportional to the sqft values mentioned in the plan.\n' +
+    '  5. The total footprint must exactly match the plot dimensions for each floor.\n\n' +
+    'Respond with ONLY the JSON array, nothing else.';
+
 
   let raw = '';
   try {
@@ -172,6 +190,8 @@ export async function generateRoomLayout(
         height_m: Math.max(0.5, Number(r.height_m ?? 4)),
         floor:    Math.max(1, Number(r.floor ?? 1)),
         type:     validateType(String(r.type ?? 'other')),
+        ...(typeof r.x_m === 'number' ? { x_m: Number(r.x_m) } : {}),
+        ...(typeof r.y_m === 'number' ? { y_m: Number(r.y_m) } : {}),
       }));
     return rooms.length >= 3 ? rooms : defaultLayout(floors);
   } catch {

@@ -20,11 +20,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Run text plan + room layout in parallel
-    const [plan, rooms] = await Promise.all([
-      generateConstructionPlan(plot_size, Number(floors), style),
-      generateRoomLayout(plot_size, Number(floors), style),
-    ]);
+    // Generate text plan first, then pass it to layout so rooms match the description
+    const plan = await generateConstructionPlan(plot_size, Number(floors), style);
+    const rooms = await generateRoomLayout(plot_size, Number(floors), style, plan);
 
     const { data, error } = await supabase
       .from('projects')

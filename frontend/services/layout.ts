@@ -1,8 +1,11 @@
 import type { FloorRoom } from '@/types';
 
-export interface RoomRect extends FloorRoom {
+export interface RoomRect {
+  room: FloorRoom;
   x: number;
   y: number;
+  rw: number; // rendered width  (may be stretched to fill the plot)
+  rh: number; // rendered height (may be stretched to fill the plot)
 }
 
 export function parsePlotDimensions(plotSize: string): { plotW: number; plotH: number } {
@@ -19,25 +22,66 @@ export function parsePlotDimensions(plotSize: string): { plotW: number; plotH: n
   return { plotW: 15, plotH: 15 };
 }
 
-/** Shelf-packing algorithm: rows left-to-right, new row when width overflows. */
-export function packRooms(rooms: FloorRoom[], plotW: number): RoomRect[] {
+/**
+ * Treemap-style recursive slice:
+ * Rooms are sorted by area and recursively assigned sub-rectangles of the
+ * remaining space proportional to their area. This guarantees 100 % plot
+ * coverage with no gaps — exactly how a real floor plan looks.
+ */
+export function treemapLayout(rooms: FloorRoom[], plotW: number, plotH: number): RoomRect[] {
   if (rooms.length === 0) return [];
-
-  const maxW = Math.max(plotW, ...rooms.map((r) => r.width_m));
   const sorted = [...rooms].sort(
-    (a, b) => b.height_m * b.width_m - a.height_m * a.width_m
+    (a, b) => b.width_m * b.height_m - a.width_m * a.height_m,
   );
+  return sliceRect(sorted, 0, 0, plotW, plotH);
+}
 
-  let x = 0, y = 0, rowH = 0;
-  return sorted.map((room) => {
-    if (x > 0 && x + room.width_m > maxW + 0.1) {
-      x = 0;
-      y += rowH;
-      rowH = 0;
-    }
-    const rect: RoomRect = { ...room, x, y };
-    x += room.width_m;
-    rowH = Math.max(rowH, room.height_m);
-    return rect;
-  });
+function sliceRect(
+  rooms: FloorRoom[],
+  x: number, y: number, w: number, h: number,
+): RoomRect[] {
+  if (rooms.length === 0) return [];
+  if (rooms.length === 1) {
+    return [{ room: rooms[0], x, y, rw: w, rh: h }];
+  }
+  const totalArea = rooms.reduce((s, r) => s + r.width_m * r.height_m, 0);
+  const firstFrac = (rooms[0].width_m * rooms[0].height_m) / totalArea;
+  if (w >= h) {
+    const splitW = w * firstFrac;
+    return [
+      { room: rooms[0], x, y, rw: splitW, rh: h },
+      ...sliceRect(rooms.slice(1), x + splitW, y, w - splitW, h),
+    ];
+  } else {
+    const splitH = h * firstFrac;
+    return [
+      { room: rooms[0], x, y, rw: w, rh: splitH },
+      ...sliceRect(rooms.slice(1), x, y + splitH, w, h - splitH),
+    ];
+  }
+}
+
+/**
+ * Use AI-provided x_m/y_m coordinates when all rooms have them.
+ * Falls back to treemap layout to guarantee full plot coverage.
+ */
+export function layoutRooms(rooms: FloorRoom[], plotW: number, plotH: number): RoomRect[] {
+  if (rooms.length === 0) return [];
+  const hasCoords = rooms.every(
+    (r) => typeof r.x_m === 'number' && typeof r.y_m === 'number',
+  );
+  if (hasCoords) {
+    // Scale AI coordinates to fit the actual plot
+    const aiMaxX = Math.max(...rooms.map((r) => r.x_m! + r.width_m));
+    const aiMaxY = Math.max(...rooms.map((r) => r.y_m! + r.height_m));
+    const sf = Math.min(plotW / aiMaxX, plotH / aiMaxY, 1.5);
+    return rooms.map((r) => ({
+      room: r,
+      x: r.x_m! * sf,
+      y: r.y_m! * sf,
+      rw: r.width_m * sf,
+      rh: r.height_m * sf,
+    }));
+  }
+  return treemapLayout(rooms, plotW, plotH);
 }
