@@ -20,7 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geist.variable} font-sans antialiased bg-slate-50`}>
+      <body className={`${geist.variable} font-sans antialiased`}>
         <Toaster
           position="top-right"
           toastOptions={{
