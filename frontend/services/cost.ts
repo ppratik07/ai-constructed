@@ -1,7 +1,7 @@
 import type { CostBreakdown } from '@/types';
 
-// Base cost per square foot in USD
-const COST_PER_SQFT = 150;
+// Base construction cost per square foot in INR (₹1,800–₹2,200 mid-range estimate)
+const COST_PER_SQFT_INR = 2000;
 
 /**
  * Parses plot size string into square footage.
@@ -25,7 +25,7 @@ export function parseSqft(plotSize: string): number {
 export function estimateCost(plotSize: string, floors: number): CostBreakdown {
   const sqftPerFloor = parseSqft(plotSize);
   const totalSqft = sqftPerFloor * Math.max(1, floors);
-  const total = totalSqft * COST_PER_SQFT;
+  const total = totalSqft * COST_PER_SQFT_INR;
 
   return {
     total: Math.round(total),
@@ -36,9 +36,9 @@ export function estimateCost(plotSize: string, floors: number): CostBreakdown {
 }
 
 export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('en-IN', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'INR',
     maximumFractionDigits: 0,
   }).format(amount);
 }

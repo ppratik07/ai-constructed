@@ -10,16 +10,39 @@ export interface RoomRect {
 
 export function parsePlotDimensions(plotSize: string): { plotW: number; plotH: number } {
   const cleaned = plotSize.toLowerCase().replace(/\s+/g, '');
+
+  // e.g. "40x60", "12×18", "15*20"
   const dimMatch = cleaned.match(/(\d+\.?\d*)[x*×](\d+\.?\d*)/);
   if (dimMatch) {
-    return { plotW: parseFloat(dimMatch[1]), plotH: parseFloat(dimMatch[2]) };
+    let w = parseFloat(dimMatch[1]);
+    let h = parseFloat(dimMatch[2]);
+    // If dimensions look like feet (both > 30), convert to metres
+    if (w > 30 && h > 30) { w = +(w * 0.3048).toFixed(1); h = +(h * 0.3048).toFixed(1); }
+    return { plotW: w, plotH: h };
   }
+
+  // e.g. "1500sqft", "200sqm"
+  const sqftMatch = cleaned.match(/(\d+\.?\d*)sq?f/);
+  if (sqftMatch) {
+    const sqm  = parseFloat(sqftMatch[1]) * 0.0929;
+    const side = +(Math.sqrt(sqm)).toFixed(1);
+    return { plotW: side, plotH: side };
+  }
+  const sqmMatch = cleaned.match(/(\d+\.?\d*)sq?m/);
+  if (sqmMatch) {
+    const side = +(Math.sqrt(parseFloat(sqmMatch[1]))).toFixed(1);
+    return { plotW: side, plotH: side };
+  }
+
+  // Plain number — treat as sqft
   const numMatch = cleaned.match(/(\d+\.?\d*)/);
   if (numMatch) {
-    const side = Math.sqrt(parseFloat(numMatch[1]));
-    return { plotW: Math.round(side), plotH: Math.round(side) };
+    const sqm  = parseFloat(numMatch[1]) * 0.0929;
+    const side = +(Math.sqrt(sqm)).toFixed(1);
+    return { plotW: side, plotH: side };
   }
-  return { plotW: 15, plotH: 15 };
+
+  return { plotW: 12, plotH: 12 };
 }
 
 /**
@@ -62,26 +85,10 @@ function sliceRect(
 }
 
 /**
- * Use AI-provided x_m/y_m coordinates when all rooms have them.
- * Falls back to treemap layout to guarantee full plot coverage.
+ * Always uses the treemap algorithm to guarantee 100 % plot coverage.
+ * AI-provided x_m/y_m are intentionally ignored because the AI rarely
+ * produces a perfectly tiling layout with zero gaps.
  */
 export function layoutRooms(rooms: FloorRoom[], plotW: number, plotH: number): RoomRect[] {
-  if (rooms.length === 0) return [];
-  const hasCoords = rooms.every(
-    (r) => typeof r.x_m === 'number' && typeof r.y_m === 'number',
-  );
-  if (hasCoords) {
-    // Scale AI coordinates to fit the actual plot
-    const aiMaxX = Math.max(...rooms.map((r) => r.x_m! + r.width_m));
-    const aiMaxY = Math.max(...rooms.map((r) => r.y_m! + r.height_m));
-    const sf = Math.min(plotW / aiMaxX, plotH / aiMaxY, 1.5);
-    return rooms.map((r) => ({
-      room: r,
-      x: r.x_m! * sf,
-      y: r.y_m! * sf,
-      rw: r.width_m * sf,
-      rh: r.height_m * sf,
-    }));
-  }
   return treemapLayout(rooms, plotW, plotH);
 }
