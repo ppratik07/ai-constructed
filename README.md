@@ -34,22 +34,29 @@ frontend/
 │   │   ├── estimate-cost/     # Cost breakdown
 │   │   └── generate-pdf/      # PDF via pdf-lib + Supabase Storage
 │   ├── layout.tsx
-│   └── page.tsx               # Redirects to /dashboard
+│   └── page.tsx               # Landing page (Hero, Features, etc.)
 ├── components/
 │   ├── auth/LoginForm.tsx
+│   ├── landing/               # Landing page sections
+│   │   ├── Navbar.tsx, Hero.tsx, Stats.tsx
+│   │   ├── Features.tsx, HowItWorks.tsx, Showcase.tsx
+│   │   └── CTA.tsx, Footer.tsx
 │   ├── layout/Navbar.tsx + SignOutButton.tsx
-│   ├── projects/ProjectCard.tsx, ProjectDetail.tsx, CreateProjectForm.tsx
-│   └── ui/Button, Input, Card, LoadingSpinner
+│   ├── projects/
+│   │   ├── ProjectCard.tsx, ProjectDetail.tsx
+│   │   ├── CreateProjectForm.tsx, FloorPlanSVG.tsx
+│   └── ui/Button, Input, Card, LoadingSpinner, MarkdownText
 ├── lib/supabase/
 │   ├── client.ts              # Browser (client components)
 │   └── server.ts              # Server components + API routes
 ├── services/
 │   ├── ai.ts                  # OpenAI integration
 │   ├── cost.ts                # Cost estimation logic
+│   ├── layout.ts              # Floor plan layout (treemap algorithm)
 │   ├── pdf.ts                 # PDF generation
 │   └── projects.ts            # DB helpers
 ├── types/index.ts
-├── middleware.ts               # Auth route protection
+├── proxy.ts                   # Development proxy configuration
 └── .env.example
 ```
 
@@ -176,39 +183,6 @@ All endpoints require a valid Supabase session cookie.
 
 ---
 
-This replaces the default README.
+## License
 
-## Getting Started
-
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
